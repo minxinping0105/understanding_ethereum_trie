@@ -9,7 +9,7 @@ DB = db.DB
 
 PRINT = 0 #change to 1 to turn on printing
 
-def bin_to_nibbles(s):
+def bin_to_nibbles(s): #将字符串s转为nibbles
     """convert string s to nibbles (half-bytes)
 
     >>> bin_to_nibbles("")
@@ -23,7 +23,7 @@ def bin_to_nibbles(s):
     """
     res = []
     for x in s:
-        res += divmod(ord(x), 16)
+        res += divmod(ord(x), 16) # ord(x)除以16,取商与余数
     return res
 
 
@@ -35,77 +35,77 @@ def nibbles_to_bin(nibbles):
         raise Exception("nibbles must be of even numbers")
 
     res = ''
-    for i in range(0, len(nibbles), 2):
-        res += chr(16 * nibbles[i] + nibbles[i + 1])
+    for i in range(0, len(nibbles), 2): # 从0到len(nibbles)，以2为步长
+        res += chr(16 * nibbles[i] + nibbles[i + 1]) #chr()函数返回ASCII码对应的字符串。
     return res
 
 
-NIBBLE_TERMINATOR = 16
+NIBBLE_TERMINATOR = 16 # 设置nibble的终止标志
 
 
-def with_terminator(nibbles):
+def with_terminator(nibbles): #为nibbles添加terminator
     nibbles = nibbles[:]
-    if not nibbles or nibbles[-1] != NIBBLE_TERMINATOR:
+    if not nibbles or nibbles[-1] != NIBBLE_TERMINATOR: #nibbles中是否包含terminator
         nibbles.append(NIBBLE_TERMINATOR)
     return nibbles
 
 
-def without_terminator(nibbles):
+def without_terminator(nibbles): #删除terminator
     nibbles = nibbles[:]
-    if nibbles and nibbles[-1] == NIBBLE_TERMINATOR:
+    if nibbles and nibbles[-1] == NIBBLE_TERMINATOR: 
         del nibbles[-1]
     return nibbles
 
 
-def adapt_terminator(nibbles, has_terminator):
+def adapt_terminator(nibbles, has_terminator): # 删除or添加 NIBBLE_TERMINATOR
     if has_terminator:
         return with_terminator(nibbles)
     else:
         return without_terminator(nibbles)
 
 
-def pack_nibbles(nibbles):
+def pack_nibbles(nibbles):  #nibbles 转为 二进制代码
     """pack nibbles to binary
 
     :param nibbles: a nibbles sequence. may have a terminator
     """
 
-    if nibbles[-1:] == [NIBBLE_TERMINATOR]:
-        flags = 2
+    if nibbles[-1:] == [NIBBLE_TERMINATOR]: #判断是否含有NIBBLE_TERMINATOR
+        flags = 2 #flag 置为2
         nibbles = nibbles[:-1]
     else:
-        flags = 0
+        flags = 0 #flag置为0
 
-    oddlen = len(nibbles) % 2
-    flags |= oddlen   # set lowest bit if odd number of nibbles
-    if oddlen:
-        nibbles = [flags] + nibbles
-    else:
-        nibbles = [flags, 0] + nibbles
+    oddlen = len(nibbles) % 2 #取余操作，判断nibbles的长度是奇数还是偶数
+    flags |= oddlen   # set lowest bit if odd number of nibbles 如果 nibbles的长度为j奇数，设置flags为oddlen
+    if oddlen: #oddlen==1 即nibbles的长度为奇数
+        nibbles = [flags] + nibbles #重新构建nibbles
+    else:  # oddlen==0 即nibbles的长度为偶数
+        nibbles = [flags, 0] + nibbles #重新构建nibbles
     o = ''
     for i in range(0, len(nibbles), 2):
-        o += chr(16 * nibbles[i] + nibbles[i + 1])
-    return o
+        o += chr(16 * nibbles[i] + nibbles[i + 1])  #chr()函数返回ASCII码对应的字符串。
+    return o #返回nibbles的二进制代码
 
 
-def unpack_to_nibbles(bindata):
+def unpack_to_nibbles(bindata): #将二进制代码转为字符nibbles
     """unpack packed binary data to nibbles
 
     :param bindata: binary packed from nibbles
     :return: nibbles sequence, may have a terminator
     """
-    o = bin_to_nibbles(bindata)
-    flags = o[0]
-    if flags & 2:
-        o.append(NIBBLE_TERMINATOR)
-    if flags & 1 == 1:
-        o = o[1:]
+    o = bin_to_nibbles(bindata) #convert string bindata to nibbles (half-bytes)
+    flags = o[0] #flags 为 nibbles的z第一个字符
+    if flags & 2: #	按位与运算符。计算
+        o.append(NIBBLE_TERMINATOR) #添加NIBBLE_TERMINATOR
+    if flags & 1 == 1: #
+        o = o[1:] #nibbles 从1开始
     else:
-        o = o[2:]
+        o = o[2:] #nibbles 从2开始
     return o
 
 
-def starts_with(full, part):
+def starts_with(full, part): #不知道
     ''' test whether the items in the part is
     the leading items of the full
     '''
@@ -119,25 +119,26 @@ def starts_with(full, part):
     NODE_TYPE_LEAF,
     NODE_TYPE_EXTENSION,
     NODE_TYPE_BRANCH
-) = tuple(range(4))
+) = tuple(range(4))  #节点的四种类型
 
 
-def is_key_value_type(node_type):
+def is_key_value_type(node_type): #判断节点是否是key_value 类型
     return node_type in [NODE_TYPE_LEAF,
                          NODE_TYPE_EXTENSION]
 
-BLANK_NODE = ''
-BLANK_ROOT = ''
+BLANK_NODE = '' #设置空节点的value值
+BLANK_ROOT = '' #设置空节点的root哈希值
 
 
 class Trie(object):
 
-    def __init__(self, dbfile, root_hash=BLANK_ROOT):
+    def __init__(self, dbfile, root_hash=BLANK_ROOT): #初始化trie树，dbfile为leveldb的数据库
         '''it also present a dictionary like interface
 
         :param dbfile: key value database
         :root: blank or trie node in form of [key, value] or [v0,v1..v15,v]
         '''
+        #self指的是类实例对象本身
         dbfile = os.path.abspath(dbfile)
         self.db = DB(dbfile)
         self.set_root_hash(root_hash)
@@ -148,26 +149,26 @@ class Trie(object):
         '''
         return self.get_root_hash()
 
-    def get_root_hash(self):
+    def get_root_hash(self): #获得根节点的hash值
         if self.root_node == BLANK_NODE:
             return BLANK_ROOT
-        assert isinstance(self.root_node, list)
-        val = rlp.encode(self.root_node)
-        key = utils.sha3(val)
-        self.db.put(key, val)
+        assert isinstance(self.root_node, list) #断言声明为true
+        val = rlp.encode(self.root_node) #使用rlp对node的value值编码
+        key = utils.sha3(val) #使用sha3方法hashvalue值，作为key
+        self.db.put(key, val) #获取到数据库中
         return key
 
     @root_hash.setter
     def root_hash(self, value):
         self.set_root_hash(value)
 
-    def set_root_hash(self, root_hash):
+    def set_root_hash(self, root_hash): #设置根节点hash值
         if root_hash == BLANK_ROOT:
             self.root_node = BLANK_NODE
             return
-        assert isinstance(root_hash, (str, unicode))
-        assert len(root_hash) in [0, 32]
-        self.root_node = self._decode_to_node(root_hash)
+        assert isinstance(root_hash, (str, unicode)) 
+        assert len(root_hash) in [0, 32] # 断言声明 root_hash的长度为32位
+        self.root_node = self._decode_to_node(root_hash) #value值解码
 
     def clear(self):
         ''' clear all tree data
@@ -177,36 +178,36 @@ class Trie(object):
         self.db.commit()
         self.root_node = BLANK_NODE
 
-    def _delete_child_stroage(self, node):
-        node_type = self._get_node_type(node)
-        if node_type == NODE_TYPE_BRANCH:
+    def _delete_child_stroage(self, node): #删除子节点
+        node_type = self._get_node_type(node)  #获得当前节点的类型
+        if node_type == NODE_TYPE_BRANCH: #若当前节点是分支节点
             for item in node[:16]:
-                self._delete_child_stroage(self._decode_to_node(item))
-        elif is_key_value_type(node_type):
+                self._delete_child_stroage(self._decode_to_node(item)) #删除所有分支
+        elif is_key_value_type(node_type): #若当前节点是node_type
             node_type = self._get_node_type(node)
-            if node_type == NODE_TYPE_EXTENSION:
+            if node_type == NODE_TYPE_EXTENSION: #NODE_TYPE_EXTENSION类型只删除当前节点
                 self._delete_child_stroage(self._decode_to_node(node[1]))
 
-    def _encode_node(self, node):
+    def _encode_node(self, node): #编码节点value值
         if node == BLANK_NODE:
             return BLANK_NODE
-        assert isinstance(node, list)
+        assert isinstance(node, list) #list表示什么？
         rlpnode = rlp.encode(node)
         if len(rlpnode) < 32:
             return node
 
         hashkey = utils.sha3(rlpnode)
-        self.db.put(hashkey, rlpnode)
+        self.db.put(hashkey, rlpnode) # put是get的意思？
         return hashkey
 
-    def _decode_to_node(self, encoded):
+    def _decode_to_node(self, encoded): #解码
         if encoded == BLANK_NODE:
             return BLANK_NODE
         if isinstance(encoded, list):
             return encoded
         return rlp.decode(self.db.get(encoded))
 
-    def _get_node_type(self, node):
+    def _get_node_type(self, node): #获取node类型与内容
         ''' get node type and content
 
         :param node: node in form of list, or BLANK_NODE
@@ -215,15 +216,15 @@ class Trie(object):
         if node == BLANK_NODE:
             return NODE_TYPE_BLANK
 
-        if len(node) == 2:
-            nibbles = unpack_to_nibbles(node[0])
+        if len(node) == 2: #node长度为2，即只有一个key
+            nibbles = unpack_to_nibbles(node[0]) #获得nibbles
             has_terminator = (nibbles and nibbles[-1] == NIBBLE_TERMINATOR)
-            return NODE_TYPE_LEAF if has_terminator\
+            return NODE_TYPE_LEAF if has_terminator\ 
                 else NODE_TYPE_EXTENSION
-        if len(node) == 17:
+        if len(node) == 17: # 多个分支的节点
             return NODE_TYPE_BRANCH
 
-    def _get(self, node, key):
+    def _get(self, node, key): #获取node的value值
         """ get value inside a node
 
         :param node: node in form of list, or BLANK_NODE
@@ -255,7 +256,7 @@ class Trie(object):
             else:
                 return BLANK_NODE
 
-    def _update(self, node, key, value):
+    def _update(self, node, key, value): #更新、插入
         """ update item inside a node
 
         :param node: node in form of list, or BLANK_NODE
@@ -268,22 +269,22 @@ class Trie(object):
         responsibility to *store* the new node storage, and delete the old
         node storage
         """
-        assert value != BLANK_NODE
-        node_type = self._get_node_type(node)
+        assert value != BLANK_NODE #声明不为空
+        node_type = self._get_node_type(node) # 获取节点类型
 
-        if node_type == NODE_TYPE_BLANK:
+        if node_type == NODE_TYPE_BLANK: 
             if PRINT: print 'blank'
-            return [pack_nibbles(with_terminator(key)), value]
+            return [pack_nibbles(with_terminator(key)), value] #更新空节点的值
 
-        elif node_type == NODE_TYPE_BRANCH:
+        elif node_type == NODE_TYPE_BRANCH: #分支节点的更新方式
             if PRINT: print 'branch'
-            if not key:
+            if not key: #什么意思？没有key？key为空？
                 if PRINT: print '\tdone', node
-                node[-1] = value
+                node[-1] = value  # node[len(node)]=value
                 if PRINT: print '\t', node
 
-            else:
-                if PRINT: print 'recursive branch'
+            else: #不知道？
+                if PRINT: print 'recursive branch' 
                 if PRINT: print '\t', node, key, value
                 new_node = self._update_and_delete_storage(
                     self._decode_to_node(node[key[0]]),
@@ -297,7 +298,7 @@ class Trie(object):
             if PRINT: print 'kv'
             return self._update_kv_node(node, key, value)
 
-    def _update_and_delete_storage(self, node, key, value):
+    def _update_and_delete_storage(self, node, key, value): #调整节点
         old_node = node[:]
         new_node = self._update(node, key, value)
         if old_node != new_node:
