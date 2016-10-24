@@ -278,14 +278,14 @@ class Trie(object):
 
         elif node_type == NODE_TYPE_BRANCH: #分支节点的更新方式
             if PRINT: print 'branch'
-            if not key: #什么意思？没有key？key为空？
+            if not key: #没有key？key为空？更新的是value值,value值更新了,不是需要重新计算key值吗？
                 if PRINT: print '\tdone', node
                 node[-1] = value  # node[len(node)]=value
                 if PRINT: print '\t', node
 
-            else: #不知道？
-                if PRINT: print 'recursive branch' 
-                if PRINT: print '\t', node, key, value
+            else: #key不为空？
+                if PRINT: print 'recursive branch' #递归分支, 更新key[0]所代表的子树
+                if PRINT: print '\t', node, key, value 
                 new_node = self._update_and_delete_storage(
                     self._decode_to_node(node[key[0]]),
                     key[1:], value)
@@ -298,52 +298,52 @@ class Trie(object):
             if PRINT: print 'kv'
             return self._update_kv_node(node, key, value)
 
-    def _update_and_delete_storage(self, node, key, value): #调整节点
-        old_node = node[:]
-        new_node = self._update(node, key, value)
+    def _update_and_delete_storage(self, node, key, value): #调整节点,node 表示要更新的节点
+        old_node = node[:] #旧节点
+        new_node = self._update(node, key, value) #更新
         if old_node != new_node:
-            self._delete_node_storage(old_node)
+            self._delete_node_storage(old_node) #删除旧节点
         return new_node
 
-    def _update_kv_node(self, node, key, value):
-        node_type = self._get_node_type(node)
-        curr_key = without_terminator(unpack_to_nibbles(node[0]))
-        is_inner = node_type == NODE_TYPE_EXTENSION
+    def _update_kv_node(self, node, key, value): #更新kv类型的节点
+        node_type = self._get_node_type(node) #获取node的节点类型
+        curr_key = without_terminator(unpack_to_nibbles(node[0])) #获取当前的key值,删除nibbles
+        is_inner = node_type == NODE_TYPE_EXTENSION #判断是否为扩展节点
         if PRINT: print 'this node is an extension node?',  is_inner
         if PRINT: print 'cur key, next key', curr_key, key
 
-        # find longest common prefix
+        # find longest common prefix 寻找最长公共子序列
         prefix_length = 0
-        for i in range(min(len(curr_key), len(key))):
+        for i in range(min(len(curr_key), len(key))): #curr_key 与 key 的最小值,作为i的上限
             if key[i] != curr_key[i]:
                 break
-            prefix_length = i + 1
+            prefix_length = i + 1 #最长公共子序列的长度
 
-        remain_key = key[prefix_length:]
-        remain_curr_key = curr_key[prefix_length:]
+        remain_key = key[prefix_length:] #prefix_length 到 length(key)的值作为remian_key
+        remain_curr_key = curr_key[prefix_length:] #prefix_length 到 length(key)的值作为remian_curr_main
 
         if PRINT: print 'remain keys..'
         if PRINT: print prefix_length, remain_key, remain_curr_key
 
         # if the keys were the same, then either this is a terminal node or not.  if yes, return [key, value]. if not, its an extension node, so the value of this node points to another node, from which we use remaining key.
         
-        if remain_key == [] == remain_curr_key:
+        if remain_key == [] == remain_curr_key:  # key值相同,且无terminator
             if PRINT: print 'keys were same', node[0], key
-            if not is_inner:
+            if not is_inner:  #非扩展节点,即叶节点
                 if PRINT: print 'not an extension node'
-                return [node[0], value]
-            if PRINT: print 'yes an extension node!'
+                return [node[0], value] 
+            if PRINT: print 'yes an extension node!' #扩展节点
             new_node = self._update_and_delete_storage(
-                self._decode_to_node(node[1]), remain_key, value)
+                self._decode_to_node(node[1]), remain_key, value) #递归更新node所链接的子节点
 
-        elif remain_curr_key == []:
+        elif remain_curr_key == []: #curr_key是key的一部分,Key 包含curr_key
             if PRINT: print 'old key exhausted'
-            if is_inner:
+            if is_inner: #扩展节点
                 if PRINT: print '\t is extension', self._decode_to_node(node[1])
                 new_node = self._update_and_delete_storage(
-                    self._decode_to_node(node[1]), remain_key, value)
-            else:
-                if PRINT: print '\tnew branch'
+                    self._decode_to_node(node[1]), remain_key, value) #递归更新node所链接的子节点
+            else: #叶节点
+                if PRINT: print '\tnew branch' #创建一个分支节点
                 new_node = [BLANK_NODE] * 17
                 new_node[-1] = node[1]
                 new_node[remain_key[0]] = self._encode_node([
@@ -351,10 +351,10 @@ class Trie(object):
                     value
                 ])
             if PRINT: print new_node
-        else:
+        else:  #创建一个新的分支
             if PRINT:  print 'making a branch'
             new_node = [BLANK_NODE] * 17
-            if len(remain_curr_key) == 1 and is_inner:
+            if len(remain_curr_key) == 1 and is_inner: #curr_key只剩下了一个字符，并且node是扩展节点
                 if PRINT: print 'key done and is inner'
                 new_node[remain_curr_key[0]] = node[1]
             else:
@@ -375,7 +375,7 @@ class Trie(object):
                 ])
             if PRINT: print new_node
 
-        if prefix_length:
+        if prefix_length: #若key和curr_key有公共部分，为公共部分创建一个扩展节点，此扩展节点的value链接到上面步骤创建的新节点，返回这个扩展节点；否则直接返回上面步骤创建的新节点
             # create node for key prefix
             if PRINT: print 'prefix length', prefix_length
             new_node= [pack_nibbles(curr_key[:prefix_length]),
@@ -385,7 +385,7 @@ class Trie(object):
         else:
             return new_node
 
-    def _delete_node_storage(self, node):
+    def _delete_node_storage(self, node): # 删除存储
         '''delete storage
         :param node: node in form of list, or BLANK_NODE
         '''
@@ -397,11 +397,11 @@ class Trie(object):
             return
         self.db.delete(encoded)
 
-    def _delete(self, node, key):
+    def _delete(self, node, key): #删除一个节点
         """ update item inside a node
 
-        :param node: node in form of list, or BLANK_NODE
-        :param key: nibble list without terminator
+        :param node: node in form of list, or BLANK_NODE 以list形式组织
+        :param key: nibble list without terminator key中不含有nibbles
             .. note:: key may be []
         :return: new node
 
@@ -413,22 +413,22 @@ class Trie(object):
         if node_type == NODE_TYPE_BLANK:
             return BLANK_NODE
 
-        if node_type == NODE_TYPE_BRANCH:
+        if node_type == NODE_TYPE_BRANCH: 
             return self._delete_branch_node(node, key)
 
         if is_key_value_type(node_type):
             return self._delete_kv_node(node, key)
 
-    def _normalize_branch_node(self, node):
+    def _normalize_branch_node(self, node):  # 规范化？
         '''node should have only one item changed
         '''
-        not_blank_items_count = sum(1 for x in range(17) if node[x])
-        assert not_blank_items_count >= 1
+        not_blank_items_count = sum(1 for x in range(17) if node[x]) #非空节点数量统计
+        assert not_blank_items_count >= 1 #声明非空节点个数大于等于1
 
-        if not_blank_items_count > 1:
+        if not_blank_items_count > 1:  #非空节点个数大于1，直接返回
             return node
 
-        # now only one item is not blank
+        # now only one item is not blank 仅有一个非空节点
         not_blank_index = [i for i, item in enumerate(node) if item][0]
 
         # the value item is not blank
@@ -457,12 +457,12 @@ class Trie(object):
             self._delete_node_storage(old_node)
         return new_node
 
-    def _delete_branch_node(self, node, key):
+    def _delete_branch_node(self, node, key): #删除分支节点
         # already reach the expected node
-        if not key:
-            node[-1] = BLANK_NODE
-            return self._normalize_branch_node(node)
-
+        if not key: #key不存在,key为空
+            node[-1] = BLANK_NODE #将value置为空
+            return self._normalize_branch_node(node)  #调用规范化函数
+        #若key不为空，递归查找node的子节点，然后删除对应的value
         encoded_new_sub_node = self._encode_node(
             self._delete_and_delete_storage(
                 self._decode_to_node(node[key[0]]), key[1:])
@@ -477,19 +477,19 @@ class Trie(object):
 
         return node
 
-    def _delete_kv_node(self, node, key):
+    def _delete_kv_node(self, node, key): #删除kv节点
         node_type = self._get_node_type(node)
         assert is_key_value_type(node_type)
-        curr_key = without_terminator(unpack_to_nibbles(node[0]))
+        curr_key = without_terminator(unpack_to_nibbles(node[0])) #去除nibbles，获得key
 
-        if not starts_with(key, curr_key):
+        if not starts_with(key, curr_key): #key不在node为根的子树内，直接返回node
             # key not found
             return node
 
-        if node_type == NODE_TYPE_LEAF:
+        if node_type == NODE_TYPE_LEAF: #node是叶节点
             return BLANK_NODE if key == curr_key else node
 
-        # for inner key value type
+        # for inner key value type  node是扩展节点，递归删除node的子节点
         new_sub_node = self._delete_and_delete_storage(
             self._decode_to_node(node[1]), key[len(curr_key):])
 
